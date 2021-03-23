@@ -75,6 +75,8 @@ def comms_setup():
     wifiCfg.doConnect(WIFI_SSID, WIFI_PASS)
     m5mqtt = M5mqtt(MQTT_ID, MQTT_IP, MQTT_PORT, MQTT_USER, MQTT_PASS, MQTT_KEEPALIVE)
     m5mqtt.start()
+    
+    # Register ENVII Temperature sensor with Home Assistant
     topic = "%ssensor/core2/core2-temp/config" % DEFAULT_DISC_PREFIX
     payload = {        
         KEY_NAME: "Core2 Temperature",
@@ -93,7 +95,51 @@ def comms_setup():
         KEY_AVAILABILITY_TOPIC: "~status",
         KEY_VALUE_TEMPLATE: TPL_TEMPERATURE
     }
-    m5mqtt.publish('%sstatus' % DEFAULT_TOPIC_SENSORS,'on')
     m5mqtt.publish(topic, str(payload))
+    
+    # Register ENVII Pressure sensor with Home Assistant
+    topic = "%ssensor/core2/core2-pressure/config" % DEFAULT_DISC_PREFIX
+    payload = {        
+        KEY_NAME: "Core2 Pressure",
+        KEY_PAYLOAD_AVAILABLE: "on",
+        KEY_PAYLOAD_NOT_AVAILABLE: "off",
+        KEY_DEVICE_CLASS: "pressure",
+        KEY_UNIQUE_ID: "122346",
+        KEY_DEVICE: {
+            KEY_IDENTIFIERS: ["12234"],
+            KEY_NAME: ATTR_NAME,
+            KEY_MODEL: ATTR_MODEL,
+            KEY_MANUFACTURER: ATTR_MANUFACTURER
+        },
+        KEY_STATE_TOPIC: "~state",
+        "~": DEFAULT_TOPIC_SENSORS,
+        KEY_AVAILABILITY_TOPIC: "~status",
+        KEY_VALUE_TEMPLATE: TPL_PRESSURE
+    }
+    m5mqtt.publish(topic, str(payload))    
 
+    # Register ENVII Humidity sensor with Home Assistant
+    topic = "%ssensor/core2/core2-humid/config" % DEFAULT_DISC_PREFIX
+    payload = {        
+        KEY_NAME: "Core2 Humidity",
+        KEY_PAYLOAD_AVAILABLE: "on",
+        KEY_PAYLOAD_NOT_AVAILABLE: "off",
+        KEY_DEVICE_CLASS: "pressure",
+        KEY_UNIQUE_ID: "122347",
+        KEY_DEVICE: {
+            KEY_IDENTIFIERS: ["12234"],
+            KEY_NAME: ATTR_NAME,
+            KEY_MODEL: ATTR_MODEL,
+            KEY_MANUFACTURER: ATTR_MANUFACTURER
+        },
+        KEY_STATE_TOPIC: "~state",
+        "~": DEFAULT_TOPIC_SENSORS,
+        KEY_AVAILABILITY_TOPIC: "~status",
+        KEY_VALUE_TEMPLATE: TPL_HUMIDITY
+    }
+    m5mqtt.publish(topic, str(payload))
+    
+    # Send Availability notice to Home Assistant
+    m5mqtt.publish('%sstatus' % DEFAULT_TOPIC_SENSORS,'on')
+    
 comms_setup()
