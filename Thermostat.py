@@ -12,7 +12,7 @@
 #   external temperature sensor and communicate values to the Core2 through MQTT
 # - Uses MQTT to communicate with relays that turn on/off furnace, fan, and AC. You need to configure the right
 #   topics and payloads to establish that communication (variables starting with RELAY_)
-# - Graphics files for heat/cool/fan (on and off) need to be stored in the /res directory
+# - Graphics files for heat/cool/fan need to be stored in the /res directory
 #
 # Home Assistant integration:
 # - Integrates with Home Assistant through MQTT (you need MQTT enabled on the HA side)
@@ -20,9 +20,9 @@
 # - Will create 'Core2 Thermostat' device with following entities:
 #    - 3 sensors for temperature, humidity, and pressure (if using the ENVII)
 #    - 1 thermostat entity
-#    - 3 switches for heating, cooling, and fan (to support manual mode)
 # - The thermostat entity allows you to control target temperature and thermostat mode through HA. Any changes will be reflected on the Core2.
-# - The switches will be enabled when the thermostat is off or in manual mode and disabled for the other themostat modes
+# - Manual mode is not supported by the HA thermostat entity. State of the devices (heating/cooling/fan on-off will be accurately reflected
+#   in home assistant, but the thermostat entity mode will be 'off' and you can't manually change the state of the devices from HA.
 #
 # Usage notes:
 # - Upon start the thermostat will be OFF. Tapping the OFF label will run the thermostat through the various modes: OFF - AUTO - MAN - HEAT - COOL - FAN
