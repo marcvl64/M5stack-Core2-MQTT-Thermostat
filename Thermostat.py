@@ -508,7 +508,8 @@ def update_display():
             0xffffff)
 
 # This is where the key decisions happen
-# -- if thermostat mode is 'manual', nothing happens.
+# -- First we handle the 'manual' use case.
+# -- Then we handle all the use cases wher the thermostat is on (auto/heat/cool/fan)
 # -- if thermostat mode is 'off', all devices are turned off.
 
 def thermostat_decision_logic():
@@ -576,7 +577,9 @@ def thermostat_decision_logic():
         timerSch.stop("blink_now")
         update_display()
 
-
+# Here's where the appliances are turned on/off using MQTT messages.
+# Here's where we also check for minimum cycle time and ignore change requests
+#  if the minimum cycle time hasn't been reached.
 def change_to (action):
     global change_ignored, heating_state, cooling_state, fan_state, m5mqtt, delay
     if delay == 0 or THERMO_MIN_CYCLE == 0:
@@ -689,7 +692,6 @@ def rcv_target_temp (topic_data):
     slider_target.set_value(round(float(topic_data)))
     thermostat_decision_logic()
 
-
 def rcv_thermo_state (topic_data):
     global thermo_state
     thermo_state = str(topic_data) if str(topic_data) != "fan_only" else "fan"
@@ -703,6 +705,8 @@ thermostat_decision_logic()
 timerSch.run("main_loop", 999, 0x00)
 
 while True:
+    
+# We ignore button presses unless the Thermostat is in manual mode
     if btnA.wasPressed() and thermo_state == THERMO_MODES[2]:
         if heating_state == 0:
             manual_command = "heating on"
