@@ -21,9 +21,10 @@
  - Will create 'Core2 Thermostat' device with following entities:
     - 3 sensors for temperature, humidity, and pressure (if using the ENVII)
     - 1 thermostat entity
+    - 2 switch entities (for manual furnace/ac control)
  - The thermostat entity allows you to control target temperature and thermostat mode through HA. Any changes will be reflected on the Core2.
- - Manual mode is not supported by the HA thermostat entity. State of the devices (heating/cooling/fan on-off will be accurately reflected
-   in home assistant, but the thermostat entity mode will be 'off' and you can't manually change the state of the devices from HA.
+ - Manual mode is not supported by the HA thermostat entity. State of the devices (heating/cooling/fan on-off will be accurately reflected in home assistant's thermostat entity, but the thermostat mode will be 'off'.You can use the HA switch entities to manually change the state of the devices from HA. When you do so, the thermostat will automatically switch to manual mode (or 'off' in the HA thermostat entity).
+ - You can't yet  manually turn on/off a fan from HA.
 
 ## Usage notes:
  - Upon start the thermostat will be OFF. Tapping the OFF label will run the thermostat through the various modes: OFF - AUTO - MAN - HEAT - COOL - FAN

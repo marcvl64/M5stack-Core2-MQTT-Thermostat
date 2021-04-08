@@ -20,9 +20,12 @@
 # - Will create 'Core2 Thermostat' device with following entities:
 #    - 3 sensors for temperature, humidity, and pressure (if using the ENVII)
 #    - 1 thermostat entity
+#    - 2 switch entities for manually turning on/off heater/ac (fan is not implemented yet)
 # - The thermostat entity allows you to control target temperature and thermostat mode through HA. Any changes will be reflected on the Core2.
-# - Manual mode is not supported by the HA thermostat entity. State of the devices (heating/cooling/fan on-off will be accurately reflected
-#   in home assistant, but the thermostat entity mode will be 'off' and you can't manually change the state of the devices from HA.
+# - When you manually switch a device on/off through the HA interface, the thermostat entity will be switched to 'off'
+#   while the Core2 will automatically switch to manual mode (HA doesn't support a 'manual mode' for the thermostat)
+# - The switch entities in HA are subscribed to the same MQTT topics you've configured to communicate with your appliances. However, when HA issues
+#   a switch change, the command will go only to the Core2, who will process it, switch the termostat to manual mode, and then executes a state change.
 #
 # Usage notes:
 # - Upon start the thermostat will be OFF. Tapping the OFF label will run the thermostat through the various modes: OFF - AUTO - MAN - HEAT - COOL - FAN
@@ -53,6 +56,7 @@ DEFAULT_DISC_PREFIX = "homeassistant/"
 DEFAULT_TOPIC_THERMOSTAT_PREFIX = "core2/thermostat/"
 DEFAULT_TOPIC_SENSOR_PREFIX = "core2/env2/"
 DEFAULT_TOPIC_DEBUG = "core2/debug/"
+DEFAULT_TOPIC_SWITCH_PREFIX = "core2/switch/"
 
 # Details on how the information on the Core2 display should be rendered
 DISP_R1 = 90
@@ -87,6 +91,7 @@ KEY_PAYLOAD_NOT_AVAILABLE = "pl_not_avail"
 KEY_STATE_TOPIC = "stat_t"
 KEY_UNIQUE_ID = "uniq_id"
 KEY_VALUE_TEMPLATE = "val_tpl"
+KEY_ICON = "ic"
 
 KEY_ACTION_TOPIC = "act_t"
 KEY_CURRENT_TEMPERATURE_TOPIC = "curr_temp_t"
@@ -101,17 +106,19 @@ KEY_TEMPERATURE_COMMAND_TOPIC = "temp_cmd_t"
 KEY_TEMPERATURE_STATE_TOPIC = "temp_stat_t"
 KEY_TEMPERATURE_UNIT = "temp_unit"
 KEY_MODE_STATE_TEMPLATE = "mode_stat_tpl"
+KEY_PAYLOAD_OFF = "pl_off"
+KEY_PAYLOAD_ON = "pl_on"
 
 # Topic and Payload details used to communicate with the furnace, AC, and fan(s)
 RELAY_HEAT_TOPIC = "core2/heat"
 RELAY_COOL_TOPIC = "core2/cool"
 RELAY_FAN_TOPIC = "core2/fan"
-RELAY_HEAT_PAYLOAD_ON = "on"
-RELAY_HEAT_PAYLOAD_OFF = "off"
-RELAY_COOL_PAYLOAD_ON = "on"
-RELAY_COOL_PAYLOAD_OFF = "off"
-RELAY_FAN_PAYLOAD_ON = "on"
-RELAY_FAN_PAYLOAD_OFF = "off"
+RELAY_HEAT_PAYLOAD_ON = "ON"
+RELAY_HEAT_PAYLOAD_OFF = "OFF"
+RELAY_COOL_PAYLOAD_ON = "ON"
+RELAY_COOL_PAYLOAD_OFF = "OFF"
+RELAY_FAN_PAYLOAD_ON = "ON"
+RELAY_FAN_PAYLOAD_OFF = "OFF"
 
 # Construction of topics for communication with Home Assistant
 TOPIC_ANNOUNCE = "announce"
@@ -121,6 +128,10 @@ TOPIC_MODE_STATE = "mode/state"
 TOPIC_ACTION = "action"
 TOPIC_MODE_COMMAND = "mode/command"
 TOPIC_TEMPERATURE_COMMAND = "temperature/command"
+TOPIC_HEATER_COMMAND = "heater/command"
+TOPIC_AC_COMMAND = "ac/command"
+TOPIC_HEATER_STATUS = "heater/status"
+TOPIC_AC_STATUS = "ac/status"
 
 # Instructions on how the payload is structured and should be parsed by Home Assistant
 TPL_TEMPERATURE = "{{value_json.temperature}}"
@@ -219,6 +230,12 @@ def comms_init():
     # Subscribe to HA target temperature changes
     m5mqtt.subscribe(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_TEMPERATURE_COMMAND, rcv_target_temp)
 
+    # Subscribe to HA manual heater changes
+    m5mqtt.subscribe(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_HEATER_COMMAND, rcv_heater_status)    
+    
+    # Subscribe to HA manual AC changes
+    m5mqtt.subscribe(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_AC_COMMAND, rcv_ac_status)     
+    
     m5mqtt.start()
     
     # Register ENVII Temperature sensor with Home Assistant
@@ -314,14 +331,65 @@ def comms_init():
         KEY_MODE_STATE_TEMPLATE: TPL_MODE_STATE
         }
     m5mqtt.publish(topic, str(json.dumps(payload)))
+
+
+    # Register Heater for manual control with Home Assistant
+    topic = "%sswitch/core2/core2-heater/config" % DEFAULT_DISC_PREFIX
+    payload = {
+        KEY_NAME: "Core2 Heater",
+        KEY_PAYLOAD_AVAILABLE: "on",
+        KEY_PAYLOAD_NOT_AVAILABLE: "off",
+        KEY_UNIQUE_ID: "122349",
+        KEY_DEVICE: {
+            KEY_IDENTIFIERS: ["12234"],
+            KEY_NAME: ATTR_NAME,
+            KEY_MODEL: ATTR_MODEL,
+            KEY_MANUFACTURER: ATTR_MANUFACTURER
+        },
+        "~": DEFAULT_TOPIC_SWITCH_PREFIX,
+        KEY_PAYLOAD_OFF: RELAY_HEAT_PAYLOAD_OFF,
+        KEY_PAYLOAD_ON: RELAY_HEAT_PAYLOAD_ON,
+        KEY_AVAILABILITY_TOPIC: "~" + TOPIC_HEATER_STATUS,
+        KEY_COMMAND_TOPIC: "~" + TOPIC_HEATER_COMMAND,
+        KEY_STATE_TOPIC: RELAY_HEAT_TOPIC,
+        KEY_ICON: "mdi:radiator"
+        }
+    m5mqtt.publish(topic, str(json.dumps(payload)))    
+        
+    # Register AC for manual control with Home Assistant
+    topic = "%sswitch/core2/core2-ac/config" % DEFAULT_DISC_PREFIX
+    payload = {
+        KEY_NAME: "Core2 AC",
+        KEY_PAYLOAD_AVAILABLE: "on",
+        KEY_PAYLOAD_NOT_AVAILABLE: "off",
+        KEY_UNIQUE_ID: "122350",
+        KEY_DEVICE: {
+            KEY_IDENTIFIERS: ["12234"],
+            KEY_NAME: ATTR_NAME,
+            KEY_MODEL: ATTR_MODEL,
+            KEY_MANUFACTURER: ATTR_MANUFACTURER
+        },
+        "~": DEFAULT_TOPIC_SWITCH_PREFIX,
+        KEY_PAYLOAD_OFF: RELAY_COOL_PAYLOAD_OFF,
+        KEY_PAYLOAD_ON: RELAY_COOL_PAYLOAD_ON,
+        KEY_AVAILABILITY_TOPIC: "~" + TOPIC_AC_STATUS,
+        KEY_COMMAND_TOPIC: "~" + TOPIC_AC_COMMAND,
+        KEY_STATE_TOPIC: RELAY_COOL_TOPIC,
+        KEY_ICON: "mdi:snowflake"
+        }
+    m5mqtt.publish(topic, str(json.dumps(payload)))
     
     # Send Availability notices to Home Assistant
     m5mqtt.publish(DEFAULT_TOPIC_SENSOR_PREFIX + TOPIC_STATUS, "on")
     m5mqtt.publish(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_STATUS, "on")
-
+    m5mqtt.publish(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_HEATER_STATUS, "on")
+    m5mqtt.publish(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_AC_STATUS, "on")
+    
     # Send initial state information to Home Assistant
     update_mqtt_state_topics()
     m5mqtt.publish(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_ACTION, "idle") 
+    m5mqtt.publish(RELAY_HEAT_TOPIC, RELAY_HEAT_PAYLOAD_OFF)
+    m5mqtt.publish(RELAY_COOL_TOPIC, RELAY_COOL_PAYLOAD_OFF)
     
 def thermostat_init():
     global action, actual_temp, blink, change_ignored, cycle, delay, ticks, thermo_state, fan_state, cooling_state, heating_state, target_temp, manual_command
@@ -698,6 +766,17 @@ def rcv_thermo_state (topic_data):
     m5mqtt.publish(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_MODE_STATE, str(thermo_state)) 
     thermostat_decision_logic()
 
+def rcv_heater_status (topic_data):
+    global thermo_state, manual_command
+    thermo_state = THERMO_MODES[2]
+    manual_command = "heating on" if str(topic_data) == RELAY_HEAT_PAYLOAD_ON else "heating off"
+    thermostat_decision_logic()
+
+def rcv_ac_status (topic_data):
+    global thermo_state, manual_command
+    thermo_state = THERMO_MODES[2]
+    manual_command = "cooling on" if str(topic_data) == RELAY_COOL_PAYLOAD_ON else "cooling off"
+    thermostat_decision_logic()    
 
 thermostat_init()
 comms_init()
