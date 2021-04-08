@@ -423,14 +423,14 @@ def update_display():
         img_BtnB.set_hidden(False)
         img_BtnC.set_hidden(False)
         slider_target.set_hidden(True)
-        lbl_target.set_text("---")
+        lbl_target.set_text("")
         lbl_target.set_text_color(0xffffff)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
         if heating_state ==1:
             lbl_action.set_text('HEATING')
             lbl_action.set_text_color(DISP_COLOR_HEAT)
-            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
-            lbl_target.set_text_color(DISP_COLOR_HEAT)
+            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
+            lbl_action.set_text_color(DISP_COLOR_HEAT)
             if change_ignored == 1:
                 timerSch.run("blink_now", 305, 0x00)
             else:
@@ -439,7 +439,7 @@ def update_display():
         elif cooling_state ==1:
             lbl_action.set_text('COOLING')
             lbl_action.set_text_color(DISP_COLOR_COOL)
-            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
+            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
             lbl_target.set_text_color(DISP_COLOR_COOL)
             if change_ignored == 1:
                 timerSch.run("blink_now", 305, 0x00)
@@ -449,7 +449,7 @@ def update_display():
         elif fan_state ==1:
             lbl_action.set_text('FAN')
             lbl_action.set_text_color(0xffffff)
-            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
+            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
             lbl_target.set_text_color(0xffffff)
             if change_ignored == 1:
                 timerSch.run("blink_now", 305, 0x00)
@@ -457,8 +457,9 @@ def update_display():
                 timerSch.stop("blink_now")
                 lbl_target.set_text_color(0xffffff)
         else:
-            lbl_action.set_text('')
-            lbl_target.set_text_color(0xffffff)
+            lbl_action.set_text('IDLE')
+            lbl_action.set_text_color(0xffffff)
+            lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
             if change_ignored == 1:
                 timerSch.run("blink_now", 305, 0x00)
             else:
@@ -524,7 +525,9 @@ def update_display():
             
    # if none of the above conditions are true (ie. thermostat is on, but idle)   
     elif thermo_state != THERMO_MODES[2]:
-        lbl_action.set_text('')
+        lbl_action.set_text('IDLE')
+        lbl_action.set_text_color(0xffffff)
+        lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
         lbl_target.set_text(str(target_temp))
         lbl_target.set_text_color(0xffffff)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
