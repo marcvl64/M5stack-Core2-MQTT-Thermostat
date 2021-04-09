@@ -110,6 +110,7 @@ KEY_TEMPERATURE_UNIT = "temp_unit"
 KEY_MODE_STATE_TEMPLATE = "mode_stat_tpl"
 KEY_PAYLOAD_OFF = "pl_off"
 KEY_PAYLOAD_ON = "pl_on"
+KEY_UNIT_OF_MEASUREMENT = "unit_of_meas"
 
 # Topic and Payload details used to communicate with the furnace, AC, and fan(s)
 RELAY_HEAT_TOPIC = "core2/heat"
@@ -254,13 +255,15 @@ def comms_init():
             KEY_MODEL: ATTR_MODEL,
             KEY_MANUFACTURER: ATTR_MANUFACTURER
         },
+#        KEY_UNIT_OF_MEASUREMENT: "ºC".encode("utf-8"),
+        KEY_UNIT_OF_MEASUREMENT: chr(186) + "C",
         KEY_STATE_TOPIC: "~" + TOPIC_STATE,
         "~": DEFAULT_TOPIC_SENSOR_PREFIX,
         KEY_AVAILABILITY_TOPIC: "~" + TOPIC_STATUS,
         KEY_VALUE_TEMPLATE: TPL_TEMPERATURE
     }
-    m5mqtt.publish(topic, str(json.dumps(payload)))
-    
+    m5mqtt.publish(topic, json.dumps(payload).encode('utf-8'))
+
     # Register ENVII Pressure sensor with Home Assistant
     topic = "%ssensor/core2/core2-pressure/config" % DEFAULT_DISC_PREFIX
     payload = {        
@@ -275,6 +278,7 @@ def comms_init():
             KEY_MODEL: ATTR_MODEL,
             KEY_MANUFACTURER: ATTR_MANUFACTURER
         },
+        KEY_UNIT_OF_MEASUREMENT: "hPa",        
         KEY_STATE_TOPIC: "~" + TOPIC_STATE,
         "~": DEFAULT_TOPIC_SENSOR_PREFIX,
         KEY_AVAILABILITY_TOPIC: "~" + TOPIC_STATUS,
@@ -296,6 +300,7 @@ def comms_init():
             KEY_MODEL: ATTR_MODEL,
             KEY_MANUFACTURER: ATTR_MANUFACTURER
         },
+        KEY_UNIT_OF_MEASUREMENT: "%", 
         KEY_STATE_TOPIC: "~" + TOPIC_STATE,
         "~": DEFAULT_TOPIC_SENSOR_PREFIX,
         KEY_AVAILABILITY_TOPIC: "~" + TOPIC_STATUS,
