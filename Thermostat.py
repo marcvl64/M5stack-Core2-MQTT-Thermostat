@@ -32,7 +32,8 @@
 # - When in manual mode, use the A/B/C buttons to turn on/off heat pump, AC, Fan. Only 1 device can be on at a given time.
 # - When min cycle duration requirement isn't met, the Core2 display will blink until it is able to implement the change
 # - Blinking is not supported on the Lovelace thermostat card. The HA dashboard will not change until the min cycle duration requirement is met.
-# - Currently, the Core2 displays temperature in Celsius. Home Assistant will display temperature depending on your HA preferences (metric vs imperial) 
+# - Core2 can display temperature in Celsius or Fahrenheit (set DISP_TEMPERATURE accordingly). Default is Fahrenheit.
+#   Home Assistant will display temperature depending on your HA preferences (metric vs imperial) 
 
 from m5stack import *
 from m5stack_ui import *
@@ -68,6 +69,7 @@ DISP_COLOR_HEAT = 0xff6600
 DISP_LBL_TARGET_OFFSET = -20
 DISP_LBL_ACTION_OFFSET = -51
 DISP_LBL_MODE_OFFSET = 55
+DISP_TEMPERATURE = "F" # change to "C" if your prefer Celsius
 
 # MQTT connection details
 MQTT_IP = config.MQTT_IP
@@ -416,6 +418,8 @@ def update_display():
     lcd.clear()
     lbl_mode.set_text(thermo_state)
     lbl_mode.set_align(ALIGN_CENTER, 0, DISP_LBL_MODE_OFFSET)
+    target_temp_display = round(target_temp if DISP_TEMPERATURE == "C" else target_temp * 9 / 5 + 32)
+    actual_temp_display = actual_temp if DISP_TEMPERATURE == "C" else actual_temp * 9 / 5 + 32
     
     # If mode is manual
     if thermo_state == THERMO_MODES[2]:    
@@ -483,7 +487,7 @@ def update_display():
         lbl_action.set_text('COOLING')
         lbl_action.set_text_color(DISP_COLOR_COOL)
         lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
-        lbl_target.set_text(str(target_temp))
+        lbl_target.set_text(str(target_temp_display))
         lbl_target.set_text_color(DISP_COLOR_COOL)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
         slider_target.set_hidden(False)
@@ -498,7 +502,7 @@ def update_display():
         lbl_action.set_text('HEATING')
         lbl_action.set_text_color(DISP_COLOR_HEAT)
         lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
-        lbl_target.set_text(str(target_temp))
+        lbl_target.set_text(str(target_temp_display))
         lbl_target.set_text_color(DISP_COLOR_HEAT)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
         slider_target.set_hidden(False)
@@ -513,7 +517,7 @@ def update_display():
         lbl_action.set_text('FAN')
         lbl_action.set_text_color(0xffffff)
         lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
-        lbl_target.set_text(str(target_temp))
+        lbl_target.set_text(str(target_temp_display))
         lbl_target.set_text_color(0xffffff)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
         slider_target.set_hidden(False)
@@ -528,7 +532,7 @@ def update_display():
         lbl_action.set_text('IDLE')
         lbl_action.set_text_color(0xffffff)
         lbl_action.set_align(ALIGN_CENTER, 0, DISP_LBL_ACTION_OFFSET)
-        lbl_target.set_text(str(target_temp))
+        lbl_target.set_text(str(target_temp_display))
         lbl_target.set_text_color(0xffffff)
         lbl_target.set_align(ALIGN_CENTER, 0, DISP_LBL_TARGET_OFFSET)
         slider_target.set_hidden(False)
@@ -567,13 +571,13 @@ def update_display():
         t += 0.5    
     if round(actual_temp) >= target_temp or thermo_state in [THERMO_MODES[index] for index in [0,2,5]]:
         lcd.print(
-            round(actual_temp),
+            round(actual_temp_display),
             int(DISP_R1 * math.sin(((actual_temp * 8 + 200) % 360 +4) / 180 * math.pi) + DISP_XCOORD),
             int(DISP_YCOORD - DISP_R1 * math.cos(((actual_temp * 8 +200) % 360 +4) / 180 * math.pi)),
             0xffffff)
     else:
         lcd.print(
-            round(actual_temp),
+            round(actual_temp_display),
             int(DISP_R1 * math.sin(((actual_temp * 8 + 200) % 360 -20) / 180 * math.pi) + DISP_XCOORD),
             int(DISP_YCOORD - DISP_R1 * math.cos(((actual_temp * 8 +200) % 360 -20) / 180 * math.pi)),
             0xffffff)

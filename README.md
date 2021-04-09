@@ -31,5 +31,5 @@
  - When in manual mode, use the A/B/C buttons to turn on/off heat pump, AC, Fan. Only 1 device can be on at a given time.
  - When min cycle duration requirement isn't met, the Core2 display will blink until it is able to implement the change
  - Blinking is not supported on the Lovelace thermostat card. The HA dashboard will not change until the min cycle duration requirement is met.
- - Currently, the Core2 displays temperature in Celsius. Home Assistant will display temperature depending on your HA preferences (metric vs imperial) 
+ - Core2 can display temperature in Celsius or Fahrenheit (set DISP_TEMPERATURE accordingly). Default is Fahrenheit. Home Assistant will display temperature depending on your HA preferences (metric vs imperial) 
 
