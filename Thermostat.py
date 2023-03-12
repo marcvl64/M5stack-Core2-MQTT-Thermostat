@@ -12,7 +12,7 @@
 #   external temperature sensor and communicate values to the Core2 through MQTT
 # - Uses MQTT to communicate with relays that turn on/off furnace, fan, and AC. You need to configure the right
 #   topics and payloads to establish that communication (variables starting with RELAY_)
-# - Graphics files for heat/cool/fan need to be stored in the /res directory
+# - Graphics files for heat/cool/fan need to be stored in the /res directory (from materialdesignicons.com, 24x24 px, R:66, G:165, B:245)
 #
 # Home Assistant integration:
 # - Integrates with Home Assistant through MQTT (you need MQTT enabled on the HA side)
@@ -58,6 +58,9 @@ DEFAULT_TOPIC_THERMOSTAT_PREFIX = "core2/thermostat/"
 DEFAULT_TOPIC_SENSOR_PREFIX = "core2/env2/"
 DEFAULT_TOPIC_DEBUG = "core2/debug/"
 DEFAULT_TOPIC_SWITCH_PREFIX = "core2/switch/"
+
+# Topics to send/receive commands to other sensors directly
+MASTER_SWITCH_TOPIC = "test-master-switch/switch/master_switch/state"
 
 # Details on how the information on the Core2 display should be rendered
 DISP_R1 = 90
@@ -135,6 +138,7 @@ TOPIC_HEATER_COMMAND = "heater/command"
 TOPIC_AC_COMMAND = "ac/command"
 TOPIC_HEATER_STATUS = "heater/status"
 TOPIC_AC_STATUS = "ac/status"
+TOPIC_DISCOVERY = "discovery"
 
 # Instructions on how the payload is structured and should be parsed by Home Assistant
 TPL_TEMPERATURE = "{{value_json.temperature}}"
@@ -151,8 +155,8 @@ THERMO_MAX_TEMP = 40           # C
 THERMO_MIN_TARGET = 15         # C
 THERMO_MAX_TARGET = 25         # C
 THERMO_MIN_CYCLE = 5           # seconds
-THERMO_COLD_TOLERANCE = 0      # C
-THERMO_HEAT_TOLERANCE = 0      # C
+THERMO_COLD_TOLERANCE = 0.5      # C
+THERMO_HEAT_TOLERANCE = 0.5      # C
 THERMO_UPDATE_FREQUENCY = 20   # seconds
 THERMO_MODES = ["off", "auto", "man", "heat", "cool", "fan"]
 
@@ -238,9 +242,18 @@ def comms_init():
     
     # Subscribe to HA manual AC changes
     m5mqtt.subscribe(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_AC_COMMAND, rcv_ac_status)     
+
+    # Subscribe to Master OFF switch commands
+    m5mqtt.subscribe(MASTER_SWITCH_TOPIC, rcv_master_off)         
+
+    # Subscribe to Home Assistant registration requests
+    m5mqtt.subscribe(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_DISCOVERY, rcv_discovery)
     
     m5mqtt.start()
-    
+    mqtt_registration()
+    mqtt_initialization()
+
+def mqtt_registration():
     # Register ENVII Temperature sensor with Home Assistant
     topic = "%ssensor/core2/core2-temp/config" % DEFAULT_DISC_PREFIX
     payload = {        
@@ -255,7 +268,6 @@ def comms_init():
             KEY_MODEL: ATTR_MODEL,
             KEY_MANUFACTURER: ATTR_MANUFACTURER
         },
-#        KEY_UNIT_OF_MEASUREMENT: "ºC".encode("utf-8"),
         KEY_UNIT_OF_MEASUREMENT: chr(186) + "C",
         KEY_STATE_TOPIC: "~" + TOPIC_STATE,
         "~": DEFAULT_TOPIC_SENSOR_PREFIX,
@@ -339,7 +351,6 @@ def comms_init():
         }
     m5mqtt.publish(topic, str(json.dumps(payload)))
 
-
     # Register Heater for manual control with Home Assistant
     topic = "%sswitch/core2/core2-heater/config" % DEFAULT_DISC_PREFIX
     payload = {
@@ -385,7 +396,8 @@ def comms_init():
         KEY_ICON: "mdi:snowflake"
         }
     m5mqtt.publish(topic, str(json.dumps(payload)))
-    
+
+def mqtt_initialization():
     # Send Availability notices to Home Assistant
     m5mqtt.publish(DEFAULT_TOPIC_SENSOR_PREFIX + TOPIC_STATUS, "on")
     m5mqtt.publish(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_STATUS, "on")
@@ -788,8 +800,21 @@ def rcv_ac_status (topic_data):
     global thermo_state, manual_command
     thermo_state = THERMO_MODES[2]
     manual_command = "cooling on" if str(topic_data) == RELAY_COOL_PAYLOAD_ON else "cooling off"
-    thermostat_decision_logic()    
+    thermostat_decision_logic()
+    
+def rcv_master_off (topic_data):
+    global thermo_state
+    thermo_state = THERMO_MODES[0]
+    thermostat_decision_logic()
 
+def rcv_discovery (topic_data):
+    mqtt_registration()
+    m5mqtt.publish(DEFAULT_TOPIC_SENSOR_PREFIX + TOPIC_STATUS, "on")
+    m5mqtt.publish(DEFAULT_TOPIC_THERMOSTAT_PREFIX + TOPIC_STATUS, "on")
+    m5mqtt.publish(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_HEATER_STATUS, "on")
+    m5mqtt.publish(DEFAULT_TOPIC_SWITCH_PREFIX + TOPIC_AC_STATUS, "on")
+    thermostat_decision_logic()
+    
 thermostat_init()
 comms_init()
 thermostat_decision_logic()
